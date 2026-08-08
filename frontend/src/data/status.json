@@ -1,0 +1,78 @@
+{
+  "overall": {
+    "status": "online",
+    "message": "All systems operational",
+    "lastUpdated": "2026-08-08T00:00:00Z"
+  },
+  "groups": [
+    {
+      "id": "infrastructure",
+      "name": "Infrastructure",
+      "services": [
+        {
+          "id": "proxmox",
+          "name": "Proxmox Host",
+          "description": "Virtualization host",
+          "status": "online",
+          "latency": 12
+        },
+        {
+          "id": "pelican-panel",
+          "name": "Pelican Panel",
+          "description": "Game server management",
+          "status": "online",
+          "latency": 18
+        },
+        {
+          "id": "fileflows",
+          "name": "FileFlows",
+          "description": "Processing automation",
+          "status": "online",
+          "latency": 21
+        }
+      ]
+    },
+    {
+      "id": "games",
+      "name": "Game Servers",
+      "services": [
+        {
+          "id": "minecraft",
+          "name": "Minecraft",
+          "address": "mc.ikevvy.com",
+          "status": "online",
+          "latency": 24,
+          "players": 4,
+          "maxPlayers": 20
+        },
+        {
+          "id": "project-zomboid",
+          "name": "Project Zomboid",
+          "address": "pz.ikevvy.com",
+          "status": "online",
+          "latency": 27,
+          "players": 2,
+          "maxPlayers": 10
+        },
+        {
+          "id": "palworld",
+          "name": "Palworld",
+          "address": "palworld.ikevvy.com",
+          "status": "online",
+          "latency": 31,
+          "players": 1,
+          "maxPlayers": 32
+        },
+        {
+          "id": "abiotic-factor",
+          "name": "Abiotic Factor",
+          "address": "abiotic.ikevvy.com",
+          "status": "offline",
+          "latency": null,
+          "players": 0,
+          "maxPlayers": 6
+        }
+      ]
+    }
+  ]
+}

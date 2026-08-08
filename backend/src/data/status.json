@@ -1,0 +1,66 @@
+{
+  "groups": [
+    {
+      "id": "infrastructure",
+      "name": "Infrastructure",
+      "services": [
+        {
+          "id": "proxmox",
+          "name": "Proxmox Host",
+          "status": "online",
+          "latency": 12
+        },
+        {
+          "id": "pelican-panel",
+          "name": "Pelican Panel",
+          "status": "online",
+          "latency": 18
+        },
+        {
+          "id": "fileflows",
+          "name": "FileFlows",
+          "status": "online",
+          "latency": 21
+        }
+      ]
+    },
+    {
+      "id": "games",
+      "name": "Game Servers",
+      "services": [
+        {
+          "id": "minecraft",
+          "name": "Minecraft",
+          "status": "online",
+          "latency": 24,
+          "players": 4,
+          "maxPlayers": 20
+        },
+        {
+          "id": "project-zomboid",
+          "name": "Project Zomboid",
+          "status": "online",
+          "latency": 27,
+          "players": 2,
+          "maxPlayers": 10
+        },
+        {
+          "id": "palworld",
+          "name": "Palworld",
+          "status": "online",
+          "latency": 31,
+          "players": 1,
+          "maxPlayers": 32
+        },
+        {
+          "id": "abiotic-factor",
+          "name": "Abiotic Factor",
+          "status": "offline",
+          "latency": null,
+          "players": 0,
+          "maxPlayers": 6
+        }
+      ]
+    }
+  ]
+}
