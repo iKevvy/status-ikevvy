@@ -19,6 +19,15 @@ export const ENV = {
     sessionSecret: process.env.SESSION_SECRET || "",
   },
 
+  mail: {
+    host: process.env.SMTP_HOST || "",
+    port: Number(process.env.SMTP_PORT || 587),
+    user: process.env.SMTP_USER || "",
+    password: process.env.SMTP_PASSWORD || "",
+    from: process.env.MAIL_FROM || "",
+    to: process.env.MAIL_TO || "",
+  },
+
   pollIntervalMs: 120000,
   historyLimit: 60,
 };

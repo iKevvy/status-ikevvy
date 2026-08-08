@@ -1,5 +1,6 @@
 import express from "express";
 import session from "express-session";
+import cookieParser from "cookie-parser";
 
 import statusRoute from "./routes/status.js";
 import adminRoute from "./routes/admin.js";
@@ -17,6 +18,7 @@ const PORT =
   process.env.PORT || 3001;
 
 app.use(express.json());
+app.use(cookieParser());
 
 app.use(
   session({

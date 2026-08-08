@@ -59,11 +59,6 @@ function PublishToggle({
           ? "cursor-not-allowed opacity-50"
           : "cursor-pointer"
       }`}
-      aria-label={
-        published
-          ? "Unpublish service"
-          : "Publish service"
-      }
     >
       <span
         className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-all ${
@@ -135,6 +130,21 @@ function Admin() {
   const [password, setPassword] =
     useState("");
 
+  const [verificationCode, setVerificationCode] =
+    useState("");
+
+  const [destination, setDestination] =
+    useState("ad***@ikevvy.com");
+
+  const [rememberDevice, setRememberDevice] =
+    useState(false);
+
+  const [resendSeconds, setResendSeconds] =
+    useState(0);
+
+  const [authStage, setAuthStage] =
+    useState("login");
+
   const [session, setSession] =
     useState(null);
 
@@ -169,6 +179,23 @@ function Admin() {
     ].filter((service) => service.published)
       .length;
   }, [services]);
+
+  useEffect(() => {
+    if (resendSeconds <= 0) {
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setResendSeconds((current) =>
+        current > 0
+          ? current - 1
+          : 0
+      );
+    }, 1000);
+
+    return () =>
+      clearInterval(timer);
+  }, [resendSeconds]);
 
   async function loadAdminData() {
     try {
@@ -226,6 +253,20 @@ function Admin() {
     }
   }
 
+  async function enterDashboard(user) {
+    setSession({
+      authenticated: true,
+      user,
+    });
+
+    setAuthStage("dashboard");
+
+    await Promise.all([
+      loadAdminData(),
+      loadServices(),
+    ]);
+  }
+
   async function checkSession() {
     try {
       const response = await fetch(
@@ -238,21 +279,21 @@ function Admin() {
 
       if (!response.ok) {
         setSession(null);
+        setAuthStage("login");
         return;
       }
 
-      const data = await response.json();
-
-      setSession(data);
+      const data =
+        await response.json();
 
       if (data.authenticated) {
-        await Promise.all([
-          loadAdminData(),
-          loadServices(),
-        ]);
+        await enterDashboard(
+          data.user
+        );
       }
     } catch {
       setSession(null);
+      setAuthStage("login");
     } finally {
       setLoading(false);
     }
@@ -269,7 +310,6 @@ function Admin() {
         "/api/v1/admin/auth/login",
         {
           method: "POST",
-
           credentials: "include",
 
           headers: {
@@ -284,25 +324,140 @@ function Admin() {
         }
       );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (!response.ok) {
         throw new Error(
-          data.error || "Login failed"
+          data.error ||
+            "Login failed"
         );
       }
 
-      setSession({
-        authenticated: true,
-        user: data.user,
-      });
+      if (
+        data.requiresEmailCode
+      ) {
+        setPassword("");
 
-      setPassword("");
+        setDestination(
+          data.destination ||
+            "ad***@ikevvy.com"
+        );
 
-      await Promise.all([
-        loadAdminData(),
-        loadServices(),
-      ]);
+        setVerificationCode("");
+        setResendSeconds(60);
+        setAuthStage("verify");
+
+        return;
+      }
+
+      if (data.authenticated) {
+        await enterDashboard(
+          data.user
+        );
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleVerifyCode(event) {
+    event.preventDefault();
+
+    setSubmitting(true);
+    setError("");
+
+    try {
+      const response = await fetch(
+        "/api/v1/admin/auth/verify-code",
+        {
+          method: "POST",
+          credentials: "include",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+            code:
+              verificationCode,
+
+            rememberDevice,
+          }),
+        }
+      );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ||
+            "Verification failed"
+        );
+      }
+
+      setVerificationCode("");
+
+      await enterDashboard(
+        data.user
+      );
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleResend() {
+    if (
+      resendSeconds > 0 ||
+      submitting
+    ) {
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
+
+    try {
+      const response = await fetch(
+        "/api/v1/admin/auth/resend-code",
+        {
+          method: "POST",
+          credentials: "include",
+        }
+      );
+
+      const data =
+        await response.json();
+
+      if (!response.ok) {
+        if (
+          response.status === 429 &&
+          data.retryAfterSeconds
+        ) {
+          setResendSeconds(
+            data.retryAfterSeconds
+          );
+        }
+
+        throw new Error(
+          data.error ||
+            "Unable to resend code"
+        );
+      }
+
+      setDestination(
+        data.destination ||
+          destination
+      );
+
+      setVerificationCode("");
+      setResendSeconds(60);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -326,6 +481,13 @@ function Admin() {
       kuma: [],
       pelican: [],
     });
+
+    setIdentifier("");
+    setPassword("");
+    setVerificationCode("");
+    setRememberDevice(false);
+    setResendSeconds(0);
+    setAuthStage("login");
   }
 
   async function handleRefresh() {
@@ -341,7 +503,8 @@ function Admin() {
         }
       );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -365,7 +528,8 @@ function Admin() {
     id,
     published
   ) {
-    const key = `${source}:${id}`;
+    const key =
+      `${source}:${id}`;
 
     setUpdatingService(key);
     setError("");
@@ -375,7 +539,6 @@ function Admin() {
         `/api/v1/admin/services/${source}/${id}`,
         {
           method: "PATCH",
-
           credentials: "include",
 
           headers: {
@@ -389,7 +552,8 @@ function Admin() {
         }
       );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -401,16 +565,17 @@ function Admin() {
       setServices((current) => ({
         ...current,
 
-        [source]: current[source].map(
-          (service) =>
-            String(service.id) ===
-            String(id)
-              ? {
-                  ...service,
-                  published,
-                }
-              : service
-        ),
+        [source]:
+          current[source].map(
+            (service) =>
+              String(service.id) ===
+              String(id)
+                ? {
+                    ...service,
+                    published,
+                  }
+                : service
+          ),
       }));
 
       await loadAdminData();
@@ -439,7 +604,10 @@ function Admin() {
     );
   }
 
-  if (!session?.authenticated) {
+  if (
+    authStage === "login" &&
+    !session?.authenticated
+  ) {
     return (
       <div className="min-h-screen bg-[#0d1117] px-4 py-10 text-[#f0f6fc]">
         <div className="mx-auto max-w-md">
@@ -457,15 +625,11 @@ function Admin() {
               className="mt-6 space-y-4"
             >
               <div>
-                <label
-                  htmlFor="identifier"
-                  className="mb-1.5 block text-sm text-[#c9d1d9]"
-                >
+                <label className="mb-1.5 block text-sm text-[#c9d1d9]">
                   Username or email
                 </label>
 
                 <input
-                  id="identifier"
                   type="text"
                   autoComplete="username"
                   value={identifier}
@@ -480,15 +644,11 @@ function Admin() {
               </div>
 
               <div>
-                <label
-                  htmlFor="password"
-                  className="mb-1.5 block text-sm text-[#c9d1d9]"
-                >
+                <label className="mb-1.5 block text-sm text-[#c9d1d9]">
                   Password
                 </label>
 
                 <input
-                  id="password"
                   type="password"
                   autoComplete="current-password"
                   value={password}
@@ -511,11 +671,122 @@ function Admin() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full rounded-md bg-[#238636] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#2ea043] disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full rounded-md bg-[#238636] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#2ea043] disabled:opacity-60"
               >
                 {submitting
                   ? "Signing in..."
                   : "Sign in"}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (authStage === "verify") {
+    return (
+      <div className="min-h-screen bg-[#0d1117] px-4 py-10 text-[#f0f6fc]">
+        <div className="mx-auto max-w-md">
+          <div className="rounded-xl border border-[#30363d] bg-[#161b22] p-6">
+            <h1 className="text-xl font-semibold">
+              Verification required
+            </h1>
+
+            <p className="mt-2 text-sm text-[#8b949e]">
+              We sent a 6-digit code to{" "}
+              <span className="text-[#c9d1d9]">
+                {destination}
+              </span>
+              .
+            </p>
+
+            <form
+              onSubmit={handleVerifyCode}
+              className="mt-6 space-y-4"
+            >
+              <div>
+                <label className="mb-1.5 block text-sm text-[#c9d1d9]">
+                  Verification code
+                </label>
+
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  autoComplete="one-time-code"
+                  value={verificationCode}
+                  onChange={(event) =>
+                    setVerificationCode(
+                      event.target.value
+                        .replace(/\D/g, "")
+                        .slice(0, 6)
+                    )
+                  }
+                  placeholder="000000"
+                  className="w-full rounded-md border border-[#30363d] bg-[#0d1117] px-3 py-3 text-center font-mono text-xl tracking-[0.35em] text-[#f0f6fc] outline-none transition focus:border-[#58a6ff]"
+                  required
+                />
+              </div>
+
+              <label className="flex cursor-pointer items-center gap-3 rounded-md border border-[#30363d] bg-[#0d1117] px-3 py-3">
+                <input
+                  type="checkbox"
+                  checked={rememberDevice}
+                  onChange={(event) =>
+                    setRememberDevice(
+                      event.target.checked
+                    )
+                  }
+                  className="h-4 w-4"
+                />
+
+                <div>
+                  <p className="text-sm">
+                    Trust this device for 30 days
+                  </p>
+                </div>
+              </label>
+
+              <div className="text-sm text-[#8b949e]">
+                Didn't receive a code?{" "}
+
+                {resendSeconds > 0 ? (
+                  <span className="text-[#6e7681]">
+                    Resend in{" "}
+                    {resendSeconds}s
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={submitting}
+                    className="text-[#58a6ff] hover:underline disabled:opacity-50"
+                  >
+                    Resend
+                  </button>
+                )}
+              </div>
+
+              {error && (
+                <p className="text-sm text-red-400">
+                  {error}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={
+                  submitting ||
+                  verificationCode.length !==
+                    6
+                }
+                className="w-full rounded-md bg-[#238636] px-4 py-2.5 text-sm font-medium text-white transition hover:bg-[#2ea043] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {submitting
+                  ? "Verifying..."
+                  : "Verify"}
               </button>
             </form>
           </div>
@@ -535,8 +806,8 @@ function Admin() {
 
             <p className="mt-1 text-sm text-[#8b949e]">
               Signed in as{" "}
-              {session.user?.email ||
-                session.user?.username}
+              {session?.user?.email ||
+                session?.user?.username}
             </p>
           </div>
 
@@ -578,8 +849,8 @@ function Admin() {
 
                 <p className="mt-2 text-sm text-[#8b949e]">
                   Uptime:{" "}
-                  {adminData.api
-                    ?.uptimeSeconds ?? 0}{" "}
+                  {adminData.api?.uptimeSeconds ??
+                    0}{" "}
                   seconds
                 </p>
               </div>
@@ -591,24 +862,21 @@ function Admin() {
 
                 <p
                   className={`mt-2 text-lg font-medium ${
-                    adminData
-                      .integrations?.kuma
-                      ?.status ===
-                    "online"
+                    adminData.integrations?.kuma
+                      ?.status === "online"
                       ? "text-emerald-400"
                       : "text-red-400"
                   }`}
                 >
-                  {adminData.integrations
-                    ?.kuma?.status ||
-                    "unknown"}
+                  {adminData.integrations?.kuma
+                    ?.status || "unknown"}
                 </p>
 
                 <p className="mt-2 text-xs text-[#6e7681]">
                   Last success:{" "}
                   {formatDate(
-                    adminData.integrations
-                      ?.kuma?.lastSuccess
+                    adminData.integrations?.kuma
+                      ?.lastSuccess
                   )}
                 </p>
               </div>
@@ -620,25 +888,21 @@ function Admin() {
 
                 <p
                   className={`mt-2 text-lg font-medium ${
-                    adminData
-                      .integrations
-                      ?.pelican
-                      ?.status ===
-                    "online"
+                    adminData.integrations?.pelican
+                      ?.status === "online"
                       ? "text-emerald-400"
                       : "text-red-400"
                   }`}
                 >
-                  {adminData.integrations
-                    ?.pelican?.status ||
-                    "unknown"}
+                  {adminData.integrations?.pelican
+                    ?.status || "unknown"}
                 </p>
 
                 <p className="mt-2 text-xs text-[#6e7681]">
                   Last success:{" "}
                   {formatDate(
-                    adminData.integrations
-                      ?.pelican?.lastSuccess
+                    adminData.integrations?.pelican
+                      ?.lastSuccess
                   )}
                 </p>
               </div>
@@ -658,8 +922,7 @@ function Admin() {
                   <div>
                     <p className="text-2xl font-semibold">
                       {adminData.monitoring
-                        ?.infrastructureServices ??
-                        0}
+                        ?.infrastructureServices ?? 0}
                     </p>
 
                     <p className="mt-1 text-xs text-[#8b949e]">
@@ -706,8 +969,7 @@ function Admin() {
 
                 <p className="text-xs text-[#6e7681]">
                   {services.kuma.length +
-                    services.pelican
-                      .length}{" "}
+                    services.pelican.length}{" "}
                   discovered
                 </p>
               </div>
@@ -719,48 +981,42 @@ function Admin() {
               ) : (
                 <div className="mt-6 grid gap-6 lg:grid-cols-2">
                   <div className="overflow-hidden rounded-xl border border-[#30363d] bg-[#161b22]">
-                    <div className="flex items-center justify-between border-b border-[#30363d] px-4 py-3">
-                      <div>
-                        <h3 className="font-medium">
-                          Uptime Kuma
-                        </h3>
+                    <div className="border-b border-[#30363d] px-4 py-3">
+                      <h3 className="font-medium">
+                        Uptime Kuma
+                      </h3>
 
-                        <p className="mt-0.5 text-xs text-[#8b949e]">
-                          {services.kuma.length} monitors discovered
-                        </p>
-                      </div>
+                      <p className="mt-0.5 text-xs text-[#8b949e]">
+                        {services.kuma.length} monitors discovered
+                      </p>
                     </div>
 
-                    <div>
-                      {services.kuma.map(
-                        (service) => (
-                          <ServiceRow
-                            key={`kuma-${service.id}`}
-                            service={service}
-                            updating={
-                              updatingService ===
-                              `kuma:${service.id}`
-                            }
-                            onToggle={
-                              handlePublishToggle
-                            }
-                          />
-                        )
-                      )}
-                    </div>
+                    {services.kuma.map(
+                      (service) => (
+                        <ServiceRow
+                          key={`kuma-${service.id}`}
+                          service={service}
+                          updating={
+                            updatingService ===
+                            `kuma:${service.id}`
+                          }
+                          onToggle={
+                            handlePublishToggle
+                          }
+                        />
+                      )
+                    )}
                   </div>
 
                   <div className="overflow-hidden rounded-xl border border-[#30363d] bg-[#161b22]">
-                    <div className="flex items-center justify-between border-b border-[#30363d] px-4 py-3">
-                      <div>
-                        <h3 className="font-medium">
-                          Pelican Servers
-                        </h3>
+                    <div className="border-b border-[#30363d] px-4 py-3">
+                      <h3 className="font-medium">
+                        Pelican Servers
+                      </h3>
 
-                        <p className="mt-0.5 text-xs text-[#8b949e]">
-                          {services.pelican.length} servers discovered
-                        </p>
-                      </div>
+                      <p className="mt-0.5 text-xs text-[#8b949e]">
+                        {services.pelican.length} servers discovered
+                      </p>
                     </div>
 
                     <div className="max-h-[640px] overflow-y-auto">
