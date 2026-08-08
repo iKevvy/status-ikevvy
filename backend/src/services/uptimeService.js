@@ -21,11 +21,22 @@ function slugify(value) {
     .replace(/^-|-$/g, "");
 }
 
+function normalizeKumaTimestamp(value) {
+  if (!value) {
+    return null;
+  }
+
+  return `${value.replace(" ", "T")}Z`;
+}
+
 function normalizeHeartbeat(
   heartbeat
 ) {
   return {
-    timestamp: heartbeat.time,
+    timestamp:
+      normalizeKumaTimestamp(
+        heartbeat.time
+      ),
     online:
       heartbeat.status === 1,
     latency:
