@@ -96,8 +96,16 @@ function AvailabilityBars({ history = [] }) {
                       <div className="font-medium text-[#f0f6fc]">
                         {isOnline
                           ? "Online"
-                          : "Offline"}
+                          : isOffline
+                            ? "Offline"
+                            : "Unknown"}
                       </div>
+
+                      {sample.quality === "retained" && (
+                        <div className="mt-1 text-[#8b949e]">
+                          Last confirmed state
+                        </div>
+                      )}
 
                       <div className="mt-1 text-[#8b949e]">
                         {formatTimestamp(

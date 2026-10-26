@@ -29,18 +29,16 @@ const KNOWN_SERVERS = {
   },
 };
 
-function slugify(value) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
 function normalizeState(state) {
-  return state === "running"
-    ? "online"
-    : "offline";
+  if (state === "running") {
+    return "online";
+  }
+
+  if (state === "offline") {
+    return "offline";
+  }
+
+  return "unknown";
 }
 
 async function getGameServer(
@@ -51,11 +49,7 @@ async function getGameServer(
     KNOWN_SERVERS[identifier];
 
   const publicId =
-    known?.id ??
-    `pelican-${slugify(
-      attributes.name ??
-      identifier
-    )}`;
+    known?.id ?? `pelican-${identifier}`;
 
   const publicName =
     known?.name ??
@@ -138,7 +132,7 @@ async function getGameServer(
       name:
         publicName,
 
-      status: "offline",
+      status: "unknown",
 
       state: "unknown",
 

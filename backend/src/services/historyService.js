@@ -9,16 +9,18 @@ export async function recordServiceSamples(services) {
   const placeholders = [];
 
   services.forEach((service, index) => {
-    const base = index * 3;
+    const base = index * 5;
 
     values.push(
       service.id,
       service.status === "online",
-      service.latency ?? null
+      service.latency ?? null,
+      service.sampleQuality ?? "confirmed",
+      service.state ?? null
     );
 
     placeholders.push(
-      `($${base + 1}, $${base + 2}, $${base + 3})`
+      `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5})`
     );
   });
 
@@ -27,7 +29,9 @@ export async function recordServiceSamples(services) {
       INSERT INTO service_history (
         service_id,
         status,
-        latency_ms
+        latency_ms,
+        sample_quality,
+        observed_state
       )
       VALUES ${placeholders.join(", ")}
     `,
@@ -48,7 +52,9 @@ export async function attachHistory(services) {
           SELECT
             status,
             latency_ms,
-            checked_at
+            checked_at,
+            sample_quality,
+            observed_state
           FROM service_history
           WHERE service_id = $1
           ORDER BY checked_at DESC
@@ -64,13 +70,21 @@ export async function attachHistory(services) {
             row.checked_at.toISOString(),
 
           online:
-            row.status,
+            row.sample_quality === "stale"
+              ? null
+              : row.status,
 
           latency:
             row.latency_ms,
 
           players:
             null,
+
+          quality:
+            row.sample_quality,
+
+          observedState:
+            row.observed_state,
         }));
 
       return {

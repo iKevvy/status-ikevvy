@@ -16,6 +16,7 @@ async function pelicanRequest(path, apiKey) {
         Authorization: `Bearer ${apiKey}`,
         Accept: "application/json",
       },
+      signal: AbortSignal.timeout(10000),
     }
   );
 

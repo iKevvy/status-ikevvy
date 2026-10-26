@@ -14,9 +14,15 @@ import {
 } from "./publishedServicesService.js";
 
 function normalizePelicanState(state) {
-  return state === "running"
-    ? "online"
-    : "offline";
+  if (state === "running") {
+    return "online";
+  }
+
+  if (state === "offline") {
+    return "offline";
+  }
+
+  return "unknown";
 }
 
 export async function getServices() {

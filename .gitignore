@@ -34,3 +34,6 @@ coverage/
 *.tmp
 *.swp
 *~
+
+# Local recovery backups (never commit)
+backups/

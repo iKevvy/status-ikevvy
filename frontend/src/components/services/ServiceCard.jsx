@@ -40,6 +40,27 @@ function ServiceCard({ service }) {
   const isOnline =
     service.status === "online";
 
+  const isUnknown =
+    service.status === "unknown";
+
+  const statusColor = isUnknown
+    ? "text-gray-400"
+    : isOnline
+      ? "text-emerald-400"
+      : "text-red-400";
+
+  const dotColor = isUnknown
+    ? "bg-gray-400"
+    : isOnline
+      ? "bg-emerald-400"
+      : "bg-red-400";
+
+  const statusLabel = isUnknown
+    ? "Unknown"
+    : isOnline
+      ? "Online"
+      : "Offline";
+
   const isPublic =
     meta.visibility != null
       ? meta.visibility === "public"
@@ -50,8 +71,10 @@ function ServiceCard({ service }) {
     Boolean(service.resources);
 
   const primaryMetric =
-    isGameService
-      ? formatUptime(
+    isUnknown
+      ? "—"
+      : isGameService
+        ? formatUptime(
           service.resources?.uptime
         )
       : service.latency != null
@@ -80,23 +103,17 @@ function ServiceCard({ service }) {
 
               <div
                 className={`flex items-center gap-1.5 text-sm font-medium ${
-                  isOnline
-                    ? "text-emerald-400"
-                    : "text-red-400"
+                  statusColor
                 }`}
               >
                 <span
                   className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                    isOnline
-                      ? "bg-emerald-400"
-                      : "bg-red-400"
+                    dotColor
                   }`}
                 />
 
                 <span>
-                  {isOnline
-                    ? "Online"
-                    : "Offline"}
+                  {statusLabel}
                 </span>
               </div>
             </div>
