@@ -2,6 +2,7 @@ import express from "express";
 import session from "express-session";
 import cookieParser from "cookie-parser";
 
+import contactRoute from "./routes/contact.js";
 import statusRoute from "./routes/status.js";
 import adminRoute from "./routes/admin.js";
 import authRoute from "./routes/auth.js";
@@ -13,6 +14,7 @@ import { refreshStatus } from "./services/statusService.js";
 import { requireAdmin } from "./middleware/requireAdmin.js";
 
 const app = express();
+app.set("trust proxy", 1);
 
 const PORT =
   process.env.PORT || 3001;
@@ -55,6 +57,8 @@ app.get(
     });
   }
 );
+
+app.use("/api/v1/contact", contactRoute);
 
 app.use(
   "/api/v1/status",

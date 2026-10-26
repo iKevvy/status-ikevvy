@@ -39,7 +39,7 @@ services:
       - ./backend/data:/app/data
 
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"
 
     depends_on:
       db:
